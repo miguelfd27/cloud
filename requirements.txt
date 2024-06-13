@@ -1,7 +1,6 @@
 streamlit
 streamlit_authenticator
 pyyaml
-base64
 plotly
 pandas
 smtplib
