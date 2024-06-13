@@ -45,47 +45,51 @@ for i in range(num_layers):
         activation = st.selectbox(f"Función de activación para la capa {i + 1}", activations, key=f"conv_activation_{i}")
         layer_config.append(('Convolutional', filters, kernel_size, activation))
 
-model = Sequential()
+if st.button('Entrenar modelo'):
+    model = Sequential()
 
-for layer in layer_config:
-    if layer[0] == 'Dense':
-        model.add(Dense(layer[1], activation=layer[2]))
-    elif layer[0] == 'Dropout':
-        model.add(Dropout(layer[1]))
-    elif layer[0] == 'Convolutional':
-        model.add(Conv2D(layer[1], kernel_size=(layer[2], layer[2]), activation=layer[3], input_shape=(28, 28, 1)))
-        model.add(MaxPooling2D(pool_size=(2, 2)))
+    for layer in layer_config:
+        if layer[0] == 'Dense':
+            model.add(Dense(layer[1], activation=layer[2]))
+        elif layer[0] == 'Dropout':
+            model.add(Dropout(layer[1]))
+        elif layer[0] == 'Convolutional':
+            model.add(Conv2D(layer[1], kernel_size=(layer[2], layer[2]), activation=layer[3], input_shape=(28, 28, 1)))
+            model.add(MaxPooling2D(pool_size=(2, 2)))
 
-model.add(Flatten())
-model.add(Dense(10, activation='softmax'))
+    model.add(Flatten())
+    model.add(Dense(10, activation='softmax'))
 
-if optimizer_choice == 'adam':
-    optimizer = Adam()
-elif optimizer_choice == 'sgd':
-    optimizer = SGD()
-elif optimizer_choice == 'rmsprop':
-    optimizer = RMSprop()
+    if optimizer_choice == 'adam':
+        optimizer = Adam()
+    elif optimizer_choice == 'sgd':
+        optimizer = SGD()
+    elif optimizer_choice == 'rmsprop':
+        optimizer = RMSprop()
 
-model.compile(optimizer=optimizer, loss='categorical_crossentropy', metrics=['accuracy'])
-history = model.fit(x_train, y_train, epochs=10, batch_size=32, validation_data=(x_test, y_test))
+    model.compile(optimizer=optimizer, loss='categorical_crossentropy', metrics=['accuracy'])
 
-loss, accuracy = model.evaluate(x_test, y_test)
-st.write(f'Precisión en los datos de prueba: {accuracy * 100:.2f}%')
+    history = model.fit(x_train, y_train, epochs=10, batch_size=32, validation_data=(x_test, y_test))
 
-plt.figure(figsize=(12, 4))
-plt.subplot(1, 2, 1)
-plt.plot(history.history['accuracy'], label='Precisión en Entrenamiento')
-plt.plot(history.history['val_accuracy'], label='Precisión en Validación')
-plt.title('Precisión del Modelo')
-plt.xlabel('Épocas')
-plt.ylabel('Precisión')
-plt.legend()
+    loss, accuracy = model.evaluate(x_test, y_test)
+    st.write(f'Precisión en los datos de prueba: {accuracy * 100:.2f}%')
 
-plt.subplot(1, 2, 2)
-plt.plot(history.history['loss'], label='Pérdida en Entrenamiento')
-plt.plot(history.history['val_loss'], label='Pérdida en Validación')
-plt.title('Pérdida del Modelo')
-plt.xlabel('Épocas')
-plt.ylabel('Pérdida')
-plt.legend()
-st.pyplot(plt)
+    plt.figure(figsize=(12, 4))
+
+    plt.subplot(1, 2, 1)
+    plt.plot(history.history['accuracy'], label='Precisión en Entrenamiento')
+    plt.plot(history.history['val_accuracy'], label='Precisión en Validación')
+    plt.title('Precisión del Modelo')
+    plt.xlabel('Épocas')
+    plt.ylabel('Precisión')
+    plt.legend()
+
+    plt.subplot(1, 2, 2)
+    plt.plot(history.history['loss'], label='Pérdida en Entrenamiento')
+    plt.plot(history.history['val_loss'], label='Pérdida en Validación')
+    plt.title('Pérdida del Modelo')
+    plt.xlabel('Épocas')
+    plt.ylabel('Pérdida')
+    plt.legend()
+
+    st.pyplot(plt)
