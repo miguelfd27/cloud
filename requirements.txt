@@ -1,0 +1,15 @@
+streamlit
+streamlit_authenticator
+pyyaml
+plotly
+pandas
+numpy
+matplotlib
+statsmodels
+scikit-learn
+xgboost
+tensorflow
+seaborn
+lazypredict
+smogn
+
