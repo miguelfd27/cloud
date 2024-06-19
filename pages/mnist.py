@@ -1,38 +1,71 @@
 import numpy as np
 import tensorflow as tf
 import streamlit as st
+import pandas as pd
 from tensorflow.keras.datasets import mnist
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense, Flatten
 from tensorflow.keras.utils import to_categorical
 from sklearn.linear_model import LogisticRegression
 from sklearn.svm import SVC
-from sklearn.metrics import accuracy_score, confusion_matrix, classification_report
+from sklearn.metrics import accuracy_score, confusion_matrix, classification_report, roc_curve, auc
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-# Título de la página
+st.set_page_config(layout="wide")
+
 st.markdown("<h1 style='color: blue;'>Comparación de Modelos de Clasificación</h1>", unsafe_allow_html=True)
 
-# Cargar el dataset MNIST
 (x_train, y_train), (x_test, y_test) = mnist.load_data()
+if st.button("Mostrar análisis de datos"):
+    row = st.columns([1, 2])
+    with row[0]:
+        st.write(":red[Dimensiones]")
+        st.write("Dimensiones de x_train:", x_train.shape)
+        st.write("Dimensiones de y_train:", y_train.shape)
+        st.write("Dimensiones de x_test:", x_test.shape)
+        st.write("Dimensiones de y_test:", y_test.shape)
 
-# Normalizar los datos (0-255 a 0-1)
+        st.write(":red[Análisis de las primeras 5 filas del conjunto de entrenamiento:]")
+        for i in range(5):
+            st.write(f"Etiqueta: {y_train[i]}")
+            st.image(x_train[i], width=50)
+            
+        st.write("Estadísticas descriptivas de las etiquetas de entrenamiento:")
+        st.write(pd.DataFrame(y_train, columns=['Etiqueta']).describe())
+
+    with row[1]:
+        fig, ax = plt.subplots(1, 2, figsize=(12, 5))
+        sns.histplot(y_train, ax=ax[0], kde=False)
+        ax[0].set_title("Distribución de etiquetas en el conjunto de entrenamiento")
+        sns.histplot(y_test, ax=ax[1], kde=False)
+        ax[1].set_title("Distribución de etiquetas en el conjunto de prueba")
+        st.pyplot(fig)
+    
+    st.write("Ejemplos de imágenes del conjunto de entrenamiento:")
+    fig, axes = plt.subplots(1, 10, figsize=(20, 2))
+    for i in range(10):
+        axes[i].imshow(x_train[i], cmap='gray')
+        axes[i].axis('off')
+    st.pyplot(fig)
+
+    st.write("Boxplot de los primeros 100 valores de las etiquetas de entrenamiento:")
+    fig, ax = plt.subplots(figsize=(10, 5))
+    sns.boxplot(x=y_train[:100], ax=ax)
+    st.pyplot(fig)
+
+
 x_train = x_train.astype('float32') / 255
 x_test = x_test.astype('float32') / 255
 
-# Convertir etiquetas a una codificación one-hot para la red neuronal
 y_train_nn = to_categorical(y_train, 10)
 y_test_nn = to_categorical(y_test, 10)
 
-# Convertir las imágenes 28x28 en vectores de 784 elementos para los modelos clásicos
 x_train_flat = x_train.reshape(x_train.shape[0], -1)
 x_test_flat = x_test.reshape(x_test.shape[0], -1)
 
-# Opciones para elegir el modelo clásico
 model_choice = st.selectbox("Elige el modelo clásico para comparar con la red neuronal:", ("Logistic Regression", "SVM"))
 
-# Red Neuronal
 st.markdown("## Red Neuronal")
 model = Sequential()
 model.add(Flatten(input_shape=(28, 28)))
@@ -40,16 +73,10 @@ model.add(Dense(128, activation='relu'))
 model.add(Dense(64, activation='relu'))
 model.add(Dense(10, activation='softmax'))
 
-model.compile(optimizer='adam', 
-              loss='categorical_crossentropy', 
-              metrics=['accuracy'])
+model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
 
-history = model.fit(x_train, y_train_nn, 
-                    epochs=10, 
-                    batch_size=32, 
-                    validation_data=(x_test, y_test_nn))
+history = model.fit(x_train, y_train_nn, epochs=10, batch_size=32, validation_data=(x_test, y_test_nn))
 
-# Evaluar el modelo de red neuronal
 loss, accuracy = model.evaluate(x_test, y_test_nn)
 st.write(f'Precisión en los datos de prueba con la red neuronal: {accuracy * 100:.2f}%')
 
@@ -71,7 +98,6 @@ plt.ylabel('Pérdida')
 plt.legend()
 st.pyplot(plt)
 
-# Modelo Clásico
 if model_choice == "Logistic Regression":
     st.markdown("## Regresión Logística")
     log_model = LogisticRegression(max_iter=1000)
@@ -79,11 +105,10 @@ if model_choice == "Logistic Regression":
     y_pred = log_model.predict(x_test_flat)
 elif model_choice == "SVM":
     st.markdown("## SVM (Support Vector Machine)")
-    svm_model = SVC()
+    svm_model = SVC(probability=True)
     svm_model.fit(x_train_flat, y_train)
     y_pred = svm_model.predict(x_test_flat)
 
-# Evaluar el modelo clásico
 accuracy_cl = accuracy_score(y_test, y_pred)
 conf_matrix_cl = confusion_matrix(y_test, y_pred)
 class_report_cl = classification_report(y_test, y_pred)
@@ -99,7 +124,33 @@ plt.ylabel('True')
 plt.title(f'Matriz de Confusión de {model_choice}')
 st.pyplot(plt)
 
-# Comparación de Precisión
+probas = log_model.predict_proba(x_test_flat) if model_choice == "Logistic Regression" else svm_model.predict_proba(x_test_flat)
+fpr, tpr, _ = roc_curve(y_test, probas[:, 1], pos_label=1)
+roc_auc = auc(fpr, tpr)
+
+st.markdown("## Curva ROC y AUC")
+plt.figure(figsize=(10, 7))
+plt.plot(fpr, tpr, color='blue', lw=2, label=f'ROC curve (area = {roc_auc:.2f})')
+plt.plot([0, 1], [0, 1], color='grey', lw=2, linestyle='--')
+plt.xlim([0.0, 1.0])
+plt.ylim([0.0, 1.05])
+plt.xlabel('False Positive Rate')
+plt.ylabel('True Positive Rate')
+plt.title(f'Receiver Operating Characteristic de {model_choice}')
+plt.legend(loc="lower right")
+st.pyplot(plt)
+
 st.markdown("## Comparación de Precisión")
 st.write(f'Precisión del modelo de red neuronal: {accuracy * 100:.2f}%')
 st.write(f'Precisión del modelo de {model_choice}: {accuracy_cl * 100:.2f}%')
+
+st.markdown("## Ejemplos de Predicciones Incorrectas")
+incorrect_indices = np.where(y_pred != y_test)[0]
+fig, axes = plt.subplots(2, 10, figsize=(20, 5))
+for i, ax in enumerate(axes.flatten()):
+    if i < len(incorrect_indices):
+        idx = incorrect_indices[i]
+        ax.imshow(x_test[idx], cmap='gray')
+        ax.set_title(f"Pred: {y_pred[idx]}, True: {y_test[idx]}")
+        ax.axis('off')
+st.pyplot(fig)

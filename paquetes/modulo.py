@@ -43,6 +43,7 @@ def menu():
     st.sidebar.page_link("pages/kmeans.py", label="kMeans")
     st.sidebar.page_link("pages/mnist.py", label="mnist")
     st.sidebar.page_link("pages/mnist2.py", label="mnist2")
+    st.sidebar.page_link("pages/mnist3.py", label="mnist3")
 
 
 
